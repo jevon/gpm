@@ -1,12 +1,6 @@
 # GPM: Generative Package Manager
 
 <div align="center">
-[![npm version](https://img.shields.io/npm/v/gpm)](https://www.npmjs.com/package/gpm)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-repo/gpm)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/your-repo/gpm/blob/main/CONTRIBUTING.md)
-
 **Supercharge your development workflow with AI-enhanced package management**
 
 [Installation](#installation) •
