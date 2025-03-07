@@ -1,9 +1,6 @@
 # GPM: Generative Package Manager
 
 <div align="center">
-  
-![GPM Logo](https://via.placeholder.com/200x200?text=GPM)  <!-- Replace with your actual logo URL when available -->
-
 [![npm version](https://img.shields.io/npm/v/gpm)](https://www.npmjs.com/package/gpm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-repo/gpm)
