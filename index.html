@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM - Generative Package Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #14b8a6;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --code-bg: #1e1e3f;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: var(--light);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        header {
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo span {
+            margin-left: 0.5rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav-links a:hover {
+            color: white;
+        }
+        
+        .github-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .github-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            max-width: 650px;
+            margin: 0 auto 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: white;
+            color: var(--primary-dark);
+        }
+        
+        .btn-primary:hover {
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .code-block {
+            max-width: 650px;
+            margin: 0 auto;
+            text-align: left;
+            background-color: var(--code-bg);
+            color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow: auto;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .code-block pre {
+            margin: 0;
+        }
+        
+        .code-block .comment {
+            color: #b0b0c0;
+        }
+        
+        .features {
+            padding: 5rem 0;
+            background-color: white;
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header p {
+            max-width: 600px;
+            margin: 0 auto;
+            color: var(--gray);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background-color: var(--light);
+            padding: 2rem;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .feature-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .feature-card h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.25rem;
+        }
+        
+        .feature-card p {
+            color: var(--gray);
+        }
+        
+        .workflow {
+            padding: 5rem 0;
+            background-color: var(--light);
+        }
+        
+        .workflow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .workflow-step {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .step-content h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+        }
+        
+        .step-content p {
+            color: var(--gray);
+        }
+        
+        .ai-integration {
+            padding: 5rem 0;
+            background-color: white;
+        }
+        
+        .ai-agents {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .agent-card {
+            background-color: var(--light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            width: 180px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .agent-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            background-color: var(--primary);
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .agent-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .agent-card p {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+        
+        .cta-section {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            text-align: center;
+        }
+        
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cta-section p {
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        footer {
+            padding: 3rem 0;
+            background-color: var(--dark);
+            color: white;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+        
+        .footer-info {
+            max-width: 350px;
+        }
+        
+        .footer-info p {
+            margin-top: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .footer-links h3 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .footer-links ul {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .social-links a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .copyright {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .feature-card {
+                padding: 1.5rem;
+            }
+            
+            .workflow-step {
+                flex-direction: column;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+                gap: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <i class="fas fa-box-open"></i>
+                    <span>GPM</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#workflow">How It Works</a>
+                    <a href="#ai-integration">AI Integration</a>
+                    <a href="https://github.com/jevon/gpm/blob/main/README.md" target="_blank">Docs</a>
+                </div>
+                <a href="https://github.com/jevon/gpm" class="github-btn" target="_blank">
+                    <i class="fab fa-github"></i>
+                    GitHub
+                </a>
+            </nav>
+            
+            <div class="hero">
+                <h1>AI-Enhanced Package Management</h1>
+                <p>GPM bridges the gap between package managers and AI coding assistants, giving LLMs rich context about your dependencies.</p>
+                
+                <div class="cta-buttons">
+                    <a href="https://github.com/jevon/gpm#installation" class="btn btn-primary">
+                        <i class="fas fa-download"></i> 
+                        Get Started
+                    </a>
+                    <a href="https://github.com/jevon/gpm#quick-start" class="btn btn-secondary">
+                        <i class="fas fa-book"></i> 
+                        Learn More
+                    </a>
+                </div>
+                
+                <div class="code-block">
+                    <pre><span class="comment"># Install with MCP server generation</span>
+gpm install express
+
+<span class="comment"># Start the MCP server to provide context to LLMs</span>
+gpm serve-mcp express
+
+<span class="comment"># Use with your favorite AI coding assistant</span>
+your-ai-tool "Create an Express API with authentication"</pre>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why GPM?</h2>
+                <p>GPM enhances AI-assisted development by providing rich, structured package context to LLMs.</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>Multi-Language Support</h3>
+                    <p>Works seamlessly with Node.js (npm), Python (pip), and Ruby (gem/bundler) projects.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI Agent Awareness</h3>
+                    <p>Detects and optimizes for popular AI coding assistants like Cursor, Copilot, and others.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3>MCP Server Generation</h3>
+                    <p>Creates context-rich servers for each package that LLMs can query for information.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3>Automatic Research</h3>
+                    <p>Researches packages from official registries and extracts examples and patterns.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <h3>Seamless Integration</h3>
+                    <p>Drop-in replacement for existing package managers with similar commands and options.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>Better Code Generation</h3>
+                    <p>Helps LLMs generate more accurate code with fewer hallucinations about API functionality.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="workflow" id="workflow">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>GPM enhances your development workflow by creating rich context for your dependencies.</p>
+            </div>
+            
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Package Installation</h3>
+                        <p>GPM detects your project type and installs packages using the appropriate manager (npm, pip, or gem/bundler).</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Package Research</h3>
+                        <p>GPM researches the package by fetching data from registries and GitHub, extracting examples and patterns.</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Context Creation</h3>
+                        <p>A structured context is created in <code>.gpm/&lt;package&gt;/research.json</code>, optimized for your detected AI coding assistant.</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>MCP Server Generation</h3>
+                        <p>GPM generates an Express server in <code>.gpm/&lt;package&gt;/mcp/</code> with API endpoints that provide package context.</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>LLM Integration</h3>
+                        <p>AI coding assistants can access the MCP server endpoints to understand the package better, resulting in more accurate code generation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="ai-integration" id="ai-integration">
+        <div class="container">
+            <div class="section-header">
+                <h2>AI Integration</h2>
+                <p>GPM automatically detects and optimizes for popular AI coding assistants.</p>
+            </div>
+            
+            <div class="ai-agents">
+                <div class="agent-card">
+                    <div class="agent-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Cursor</h3>
+                    <p>AI-powered code editor</p>
+                </div>
+                
+                <div class="agent-card">
+                    <div class="agent-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Copilot</h3>
+                    <p>GitHub's AI pair programmer</p>
+                </div>
+                
+                <div class="agent-card">
+                    <div class="agent-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Aider</h3>
+                    <p>Chat-based coding assistant</p>
+                </div>
+                
+                <div class="agent-card">
+                    <div class="agent-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Continue</h3>
+                    <p>Open-source coding assistant</p>
+                </div>
+                
+                <div class="agent-card">
+                    <div class="agent-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Windsurf</h3>
+                    <p>AI development environment</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to enhance your AI-assisted development?</h2>
+            <p>Install GPM today and give your AI coding assistants the context they need.</p>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/jevon/gpm#installation" class="btn btn-primary">
+                    <i class="fas fa-download"></i> 
+                    Get Started
+                </a>
+                <a href="https://github.com/jevon/gpm" class="btn btn-secondary">
+                    <i class="fab fa-github"></i> 
+                    Star on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <div class="logo">
+                        <i class="fas fa-box-open"></i>
+                        <span>GPM</span>
+                    </div>
+                    <p>GPM is an enhanced package manager that bridges the gap between traditional package managers and AI coding assistants.</p>
+                    
+                    <div class="social-links">
+                        <a href="https://github.com/jevon/gpm" target="_blank">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="https://twitter.com/your-twitter" target="_blank">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-links">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="https://github.com/jevon/gpm#installation">Installation</a></li>
+                        <li><a href="https://github.com/jevon/gpm#documentation">Documentation</a></li>
+                        <li><a href="https://github.com/jevon/gpm/blob/main/README.md">README</a></li>
+                        <li><a href="https://github.com/jevon/gpm/issues">Report Issues</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-links">
+                    <h3>Community</h3>
+                    <ul>
+                        <li><a href="https://github.com/jevon/gpm#contributing">Contributing</a></li>
+                        <li><a href="https://github.com/jevon/gpm/graphs/contributors">Contributors</a></li>
+                        <li><a href="https://github.com/jevon/gpm">GitHub</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="copyright">
+                &copy; 2025 GPM. All rights reserved. Released under the MIT License.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
