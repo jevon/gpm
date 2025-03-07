@@ -22,10 +22,6 @@
 
 GPM is an enhanced package manager that bridges the gap between traditional package managers and AI coding assistants. It automatically creates MCP (Model Context Protocol) servers for your installed packages, giving LLMs rich, structured context about their functionality and APIs.
 
-<div align="center">
-  <img src="https://via.placeholder.com/800x400?text=GPM+Demo" alt="GPM Demo" width="800">
-</div>
-
 ## 🎯 Features
 
 - **Multi-language support**: Works with Node.js (npm), Python (pip), and Ruby (gem/bundler)
@@ -207,14 +203,6 @@ Contributions are welcome! Please check out our [contributing guidelines](CONTRI
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Acknowledgments
-
-- Thanks to all [contributors](https://github.com/your-repo/gpm/graphs/contributors)
-- Inspired by the need for better AI-human collaboration in coding
-- Built with ❤️ for developers working with AI
-
----
 
 <div align="center">
   Made with ❤️ for the AI-assisted development community
