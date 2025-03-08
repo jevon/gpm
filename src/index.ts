@@ -223,13 +223,29 @@ program
     await createMcpServer(pkg, research);
   });
 
-// Serve MCP for a package
+// Serve MCP for a package or run unified server
 program
-  .command('serve-mcp <package>')
-  .description('Start MCP server for a package')
+  .command('serve-mcp [package]')
+  .description('Start MCP server for all packages (or a specific one if provided)')
   .option('-p, --port <port>', 'Port to run the server on', (value) => parseInt(value, 10))
   .action(async (pkg, options) => {
-    await serveMcp(pkg, options.port);
+    if (pkg) {
+      console.log(chalk.blue(`Starting MCP server for specific package: ${pkg}`));
+      await serveMcp(pkg, options.port);
+    } else {
+      console.log(chalk.blue('Starting unified MCP server for all packages'));
+      await serveMcp(undefined, options.port);
+    }
+  });
+
+// Start the unified server
+program
+  .command('serve')
+  .description('Start the unified MCP server for dynamic package research')
+  .option('-p, --port <port>', 'Port to run the server on', (value) => parseInt(value, 10))
+  .action(async (options) => {
+    console.log(chalk.blue('Starting unified MCP server for dynamic package research'));
+    await serveMcp(undefined, options.port);
   });
 
 // List MCP servers
