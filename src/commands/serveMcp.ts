@@ -86,6 +86,7 @@ async function createUnifiedServerFile(mcpDir: string): Promise<void> {
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -264,7 +265,7 @@ async function getPackageInfo(packageName, type = 'auto', forceRefresh = false) 
 
 // Helper function to research a package
 async function researchPackage(packageName, type = 'auto') {
-  console.log(\`Researching package: \${packageName} (type: \${type})\`);
+  console.log(`Performing deep research on package: ${packageName} (type: ${type})`);
   
   try {
     let packageType = type;
@@ -282,19 +283,25 @@ async function researchPackage(packageName, type = 'auto') {
     let apiReference = {};
     let basicUsage = '';
     let framework = 'unknown';
+    let dependencies = [];
+    let popularityMetrics = {};
+    let codeAnalysis = {};
+    let usagePatterns = [];
     
     switch (packageType) {
       case 'node':
-        // Query npm registry
-        const npmResult = await execAsync(\`npm view \${packageName} --json\`);
+        console.log(`Deep research for Node.js package: ${packageName}`);
+        
+        // Query npm registry for detailed information
+        const npmResult = await execAsync(`npm view ${packageName} --json`);
         metadata = JSON.parse(npmResult.stdout);
         
         // Get readme if available
         try {
-          const readmeResult = await execAsync(\`npm view \${packageName} readme\`);
+          const readmeResult = await execAsync(`npm view ${packageName} readme`);
           readme = readmeResult.stdout;
         } catch (error) {
-          console.log(\`No readme found for \${packageName}\`);
+          console.log(`No readme found for ${packageName}`);
         }
         
         // Extract examples from readme
@@ -305,27 +312,237 @@ async function researchPackage(packageName, type = 'auto') {
         
         // Extract basic usage
         basicUsage = examples.length > 0 ? examples[0] : '';
+        
+        // Get dependencies
+        if (metadata.dependencies) {
+          dependencies = Object.keys(metadata.dependencies).map(dep => ({
+            name: dep,
+            version: metadata.dependencies[dep]
+          }));
+        }
+        
+        // Get popularity metrics
+        try {
+          const { stdout: downloadsStdout } = await execAsync(`npm view ${packageName} downloads`);
+          if (downloadsStdout) {
+            const downloadsMatch = downloadsStdout.match(/last month:\s*([0-9,]+)/i);
+            if (downloadsMatch && downloadsMatch[1]) {
+              popularityMetrics.monthlyDownloads = downloadsMatch[1].replace(/,/g, '');
+            }
+          }
+          
+          // Check if this is a framework or library
+          if (metadata.keywords) {
+            const frameworkKeywords = ['framework', 'react', 'vue', 'angular', 'next', 'express'];
+            const isFramework = metadata.keywords.some(keyword => 
+              frameworkKeywords.some(fw => keyword.toLowerCase().includes(fw))
+            );
+            framework = isFramework ? 'framework' : 'library';
+          }
+          
+          // See if there's a GitHub repository
+          if (metadata.repository && metadata.repository.url && metadata.repository.url.includes('github.com')) {
+            const repoUrl = metadata.repository.url;
+            const githubMatch = repoUrl.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+            
+            if (githubMatch && githubMatch.length >= 3) {
+              const owner = githubMatch[1];
+              const repo = githubMatch[2].replace('.git', '');
+              
+              try {
+                // Get GitHub stars
+                const repoInfoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+                if (repoInfoResponse.ok) {
+                  const repoInfo = await repoInfoResponse.json();
+                  popularityMetrics.stars = repoInfo.stargazers_count;
+                  popularityMetrics.forks = repoInfo.forks_count;
+                  popularityMetrics.openIssues = repoInfo.open_issues_count;
+                }
+              } catch (error) {
+                console.log(`Error fetching GitHub data for ${packageName}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.log(`Error fetching popularity metrics for ${packageName}`);
+        }
+        
+        // Perform deeper code analysis for npm packages
+        try {
+          // Create a temporary directory to install the package for analysis
+          const tempDir = path.join(os.tmpdir(), `gpm-research-${packageName}-${Date.now()}`);
+          await fs.mkdir(tempDir, { recursive: true });
+          
+          // Install the package
+          await execAsync(`cd ${tempDir} && npm init -y && npm install ${packageName} --no-save`, { timeout: 60000 });
+          
+          // Find the main file
+          const packageJsonPath = path.join(tempDir, 'node_modules', packageName, 'package.json');
+          const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+          const mainFile = packageJson.main || 'index.js';
+          const mainFilePath = path.join(tempDir, 'node_modules', packageName, mainFile);
+          
+          // Check if file exists
+          try {
+            await fs.access(mainFilePath);
+            
+            // Read file content
+            const fileContent = await fs.readFile(mainFilePath, 'utf-8');
+            
+            // Detect usage patterns
+            const importPattern = /(?:import|require)\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+            const imports = new Set();
+            let match;
+            
+            while ((match = importPattern.exec(fileContent)) !== null) {
+              if (match[1] && !match[1].startsWith('.')) {
+                imports.add(match[1]);
+              }
+            }
+            
+            codeAnalysis.imports = Array.from(imports);
+            
+            // Detect common patterns
+            const patterns = [];
+            
+            // Async pattern
+            if (fileContent.includes('async') && fileContent.includes('await')) {
+              patterns.push('Uses async/await pattern');
+            }
+            
+            // Promise pattern
+            if (fileContent.includes('new Promise') || fileContent.includes('.then(')) {
+              patterns.push('Uses Promise-based patterns');
+            }
+            
+            // Event emitter
+            if (fileContent.includes('EventEmitter') || 
+                fileContent.includes('.on(') || 
+                fileContent.includes('.emit(')) {
+              patterns.push('Uses event-driven programming');
+            }
+            
+            // Stream pattern
+            if (fileContent.includes('Stream') || 
+                fileContent.includes('.pipe(') || 
+                fileContent.includes('Readable') || 
+                fileContent.includes('Writable')) {
+              patterns.push('Uses Node.js streams');
+            }
+            
+            codeAnalysis.patterns = patterns;
+            
+            // Count exported items
+            const exportMatches = fileContent.match(/(?:module\.)?exports(?:\.([a-zA-Z_$][a-zA-Z0-9_$]*)|\[['"](.*?)['"]\])\s*=/g) || [];
+            codeAnalysis.exportCount = exportMatches.length;
+            
+            // Determine if it's a class-based or function-based package
+            const classMatches = fileContent.match(/class\s+[a-zA-Z_$][a-zA-Z0-9_$]*/g) || [];
+            const functionMatches = fileContent.match(/function\s+[a-zA-Z_$][a-zA-Z0-9_$]*/g) || [];
+            
+            codeAnalysis.style = classMatches.length > functionMatches.length ? 'class-based' : 'function-based';
+            
+            // Extract usage patterns from examples
+            usagePatterns = examples.map(example => {
+              const lines = example.split('\n');
+              // Get the first few lines that show how to use the package
+              return lines.slice(0, Math.min(5, lines.length)).join('\n');
+            });
+          } catch (error) {
+            console.log(`Error reading main file for ${packageName}`);
+          }
+          
+          // Clean up temp directory
+          await execAsync(`rm -rf ${tempDir}`);
+        } catch (error) {
+          console.log(`Error performing deep code analysis for ${packageName}:`, error);
+        }
         break;
         
       case 'python':
-        // Query PyPI
-        const pypiResult = await execAsync(\`pip show \${packageName}\`);
+        console.log(`Deep research for Python package: ${packageName}`);
         
-        // Parse PyPI output
-        const lines = pypiResult.stdout.split('\\n');
-        for (const line of lines) {
-          const [key, value] = line.split(': ');
-          if (key && value) {
-            metadata[key.toLowerCase()] = value.trim();
+        // Query PyPI
+        try {
+          // Try PyPI JSON API first for richer data
+          const pypiResponse = await fetch(`https://pypi.org/pypi/${packageName}/json`);
+          
+          if (pypiResponse.ok) {
+            const pypiData = await pypiResponse.json();
+            
+            metadata = {
+              name: pypiData.info.name,
+              version: pypiData.info.version,
+              description: pypiData.info.summary,
+              author: pypiData.info.author,
+              authorEmail: pypiData.info.author_email,
+              homepage: pypiData.info.home_page || pypiData.info.project_url,
+              license: pypiData.info.license,
+              keywords: pypiData.info.keywords
+            };
+            
+            // Get dependencies
+            if (pypiData.info.requires_dist) {
+              dependencies = pypiData.info.requires_dist.map(dep => {
+                const parts = dep.split(' ');
+                return { name: parts[0], version: parts.slice(1).join(' ') };
+              });
+            }
+            
+            // Get download stats from PyPI API
+            try {
+              const statsResponse = await fetch(`https://pypistats.org/api/packages/${packageName}/recent`);
+              if (statsResponse.ok) {
+                const statsData = await statsResponse.json();
+                popularityMetrics.monthlyDownloads = statsData.data.last_month;
+              }
+            } catch (error) {
+              console.log(`Error fetching PyPI stats for ${packageName}`);
+            }
+          } else {
+            // Fall back to pip show
+            const pypiResult = await execAsync(`pip show ${packageName}`);
+            
+            // Parse PyPI output
+            const lines = pypiResult.stdout.split('\\n');
+            for (const line of lines) {
+              const [key, value] = line.split(': ');
+              if (key && value) {
+                metadata[key.toLowerCase()] = value.trim();
+              }
+            }
+            
+            // Get dependencies from requires
+            if (metadata.requires) {
+              dependencies = metadata.requires.split(', ').map(dep => ({ name: dep }));
+            }
+          }
+        } catch (error) {
+          console.log(`Error fetching PyPI data for ${packageName}`);
+          
+          // Try pip show as fallback
+          try {
+            const pypiResult = await execAsync(`pip show ${packageName}`);
+            
+            // Parse PyPI output
+            const lines = pypiResult.stdout.split('\\n');
+            for (const line of lines) {
+              const [key, value] = line.split(': ');
+              if (key && value) {
+                metadata[key.toLowerCase()] = value.trim();
+              }
+            }
+          } catch (pipError) {
+            console.log(`Error running pip show for ${packageName}`);
           }
         }
         
-        // Get readme from PyPI (if available)
+        // Get readme from PyPI
         try {
           const pythonReadme = await fetchPythonReadme(packageName);
           readme = pythonReadme;
         } catch (error) {
-          console.log(\`No readme found for \${packageName}\`);
+          console.log(`No readme found for ${packageName}`);
         }
         
         // Extract examples from readme
@@ -336,22 +553,153 @@ async function researchPackage(packageName, type = 'auto') {
         
         // Extract basic usage
         basicUsage = examples.length > 0 ? examples[0] : '';
+        
+        // Try to determine if it's a framework or library
+        if (metadata.keywords) {
+          const frameworkKeywords = ['framework', 'django', 'flask', 'web', 'api'];
+          const isFramework = frameworkKeywords.some(keyword => 
+            metadata.keywords.toLowerCase().includes(keyword)
+          );
+          framework = isFramework ? 'framework' : 'library';
+        } else if (packageName.toLowerCase().includes('django') || 
+                 packageName.toLowerCase().includes('flask') || 
+                 packageName.toLowerCase().includes('web')) {
+          framework = 'framework';
+        } else {
+          framework = 'library';
+        }
+        
+        // Try to analyze locally installed package
+        try {
+          const { stdout } = await execAsync(`pip show -f ${packageName}`);
+          const filesSection = stdout.split('Files:')[1];
+          
+          if (filesSection) {
+            const files = filesSection.trim().split('\\n').map(f => f.trim());
+            
+            // Count .py files
+            const pyFiles = files.filter(f => f.endsWith('.py'));
+            codeAnalysis.fileCount = pyFiles.length;
+            
+            // Try to determine if it's class-based or function-based
+            // This is a simplistic approach, would need actual code analysis for better results
+            const initFile = files.find(f => f.endsWith('__init__.py'));
+            
+            if (initFile) {
+              const locationMatch = stdout.match(/Location: (.+)/);
+              if (locationMatch && locationMatch[1]) {
+                const packagePath = locationMatch[1].trim();
+                const initPath = path.join(packagePath, packageName, '__init__.py');
+                
+                try {
+                  const initContent = await fs.readFile(initPath, 'utf-8');
+                  
+                  // Count classes and functions
+                  const classCount = (initContent.match(/class\s+[A-Za-z0-9_]+/g) || []).length;
+                  const functionCount = (initContent.match(/def\s+[A-Za-z0-9_]+/g) || []).length;
+                  
+                  codeAnalysis.style = classCount > functionCount ? 'class-based' : 'function-based';
+                  
+                  // Check for common Python patterns
+                  const patterns = [];
+                  
+                  if (initContent.includes('__all__')) {
+                    patterns.push('Uses __all__ for explicit exports');
+                  }
+                  
+                  if (initContent.includes('import abc') || initContent.includes('from abc import')) {
+                    patterns.push('Uses abstract base classes');
+                  }
+                  
+                  if (initContent.includes('async def')) {
+                    patterns.push('Uses asynchronous programming');
+                  }
+                  
+                  if (initContent.includes('@')) {
+                    patterns.push('Uses decorators');
+                  }
+                  
+                  codeAnalysis.patterns = patterns;
+                } catch (error) {
+                  console.log(`Error reading __init__.py for ${packageName}`);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.log(`Error analyzing files for ${packageName}`);
+        }
+        
+        // Extract usage patterns from examples
+        usagePatterns = examples.map(example => {
+          const lines = example.split('\n');
+          // Get the first few lines that show how to use the package
+          return lines.slice(0, Math.min(5, lines.length)).join('\n');
+        });
         break;
         
       case 'ruby':
-        // Query RubyGems
-        const gemResult = await execAsync(\`gem info \${packageName}\`);
+        console.log(`Deep research for Ruby gem: ${packageName}`);
         
-        // Parse gem output
-        const gemLines = gemResult.stdout.split('\\n');
-        metadata.name = packageName;
-        
-        for (const line of gemLines) {
-          if (line.includes('Version:')) {
-            metadata.version = line.split('Version:')[1].trim();
+        // Query RubyGems.org API
+        try {
+          const rubygemsResponse = await fetch(`https://rubygems.org/api/v1/gems/${packageName}.json`);
+          
+          if (rubygemsResponse.ok) {
+            const rubygemsData = await rubygemsResponse.json();
+            
+            metadata = {
+              name: rubygemsData.name,
+              version: rubygemsData.version,
+              description: rubygemsData.info,
+              authors: rubygemsData.authors,
+              homepage: rubygemsData.homepage_uri,
+              documentation: rubygemsData.documentation_uri,
+              sourceCode: rubygemsData.source_code_uri,
+              downloads: rubygemsData.downloads
+            };
+            
+            // Popularity metrics
+            popularityMetrics.totalDownloads = rubygemsData.downloads;
+            popularityMetrics.versionDownloads = rubygemsData.version_downloads;
+          } else {
+            // Fall back to gem info command
+            const gemResult = await execAsync(`gem info ${packageName}`);
+            
+            // Parse gem output
+            const gemLines = gemResult.stdout.split('\\n');
+            metadata.name = packageName;
+            
+            for (const line of gemLines) {
+              if (line.includes('Version:')) {
+                metadata.version = line.split('Version:')[1].trim();
+              }
+              if (line.includes('Summary:')) {
+                metadata.description = line.split('Summary:')[1].trim();
+              }
+            }
           }
-          if (line.includes('Summary:')) {
-            metadata.description = line.split('Summary:')[1].trim();
+        } catch (error) {
+          console.log(`Error fetching RubyGems.org data for ${packageName}`);
+          
+          // Fall back to gem info command
+          try {
+            const gemResult = await execAsync(`gem info ${packageName}`);
+            
+            // Parse gem output
+            const gemLines = gemResult.stdout.split('\\n');
+            metadata.name = packageName;
+            
+            for (const line of gemLines) {
+              if (line.includes('Version:')) {
+                metadata.version = line.split('Version:')[1].trim();
+              }
+              if (line.includes('Summary:')) {
+                metadata.description = line.split('Summary:')[1].trim();
+              }
+            }
+          } catch (gemError) {
+            console.log(`Error running gem info for ${packageName}`);
           }
         }
         
@@ -360,7 +708,7 @@ async function researchPackage(packageName, type = 'auto') {
           const rubyReadme = await fetchRubyReadme(packageName);
           readme = rubyReadme;
         } catch (error) {
-          console.log(\`No readme found for \${packageName}\`);
+          console.log(`No readme found for ${packageName}`);
         }
         
         // Extract examples from readme
@@ -371,12 +719,96 @@ async function researchPackage(packageName, type = 'auto') {
         
         // Extract basic usage
         basicUsage = examples.length > 0 ? examples[0] : '';
+        
+        // Try to determine if it's a framework or library
+        if (packageName.toLowerCase().includes('rails') || 
+           packageName.toLowerCase().includes('sinatra') || 
+           metadata.description?.toLowerCase().includes('framework')) {
+          framework = 'framework';
+        } else {
+          framework = 'library';
+        }
+        
+        // Get dependencies
+        try {
+          const { stdout } = await execAsync(`gem dependency ${packageName} --pipe`);
+          dependencies = stdout.split('|').map(dep => {
+            const parts = dep.trim().split(' ');
+            return { name: parts[0], version: parts.slice(1).join(' ') };
+          });
+        } catch (error) {
+          console.log(`Error getting dependencies for ${packageName}`);
+        }
+        
+        // Try to analyze local gem
+        try {
+          const { stdout } = await execAsync(`gem specification ${packageName} --yaml`);
+          
+          // This is a very basic approach - a real implementation would parse the YAML
+          
+          // Try to get gem path
+          const gemPathResult = await execAsync(`gem which ${packageName} 2>/dev/null || echo "not found"`);
+          const gemPath = gemPathResult.stdout.trim();
+          
+          if (gemPath && gemPath !== "not found") {
+            // Try to read the main gem file
+            try {
+              const mainRbPath = gemPath.replace(/\/lib\/.*$/, '/lib/' + packageName + '.rb');
+              const fileContent = await fs.readFile(mainRbPath, 'utf-8');
+              
+              // Count classes, modules and methods
+              const classCount = (fileContent.match(/class\s+[A-Z][A-Za-z0-9_]*/g) || []).length;
+              const moduleCount = (fileContent.match(/module\s+[A-Z][A-Za-z0-9_]*/g) || []).length;
+              const methodCount = (fileContent.match(/def\s+[a-z_][A-Za-z0-9_]*/g) || []).length;
+              
+              codeAnalysis.classCount = classCount;
+              codeAnalysis.moduleCount = moduleCount;
+              codeAnalysis.methodCount = methodCount;
+              codeAnalysis.style = classCount > methodCount ? 'class-based' : 'method-based';
+              
+              // Check for common Ruby patterns
+              const patterns = [];
+              
+              if (fileContent.includes('extend ')) {
+                patterns.push('Uses module extension');
+              }
+              
+              if (fileContent.includes('include ')) {
+                patterns.push('Uses module inclusion');
+              }
+              
+              if (fileContent.includes('attr_accessor') || 
+                 fileContent.includes('attr_reader') || 
+                 fileContent.includes('attr_writer')) {
+                patterns.push('Uses attribute accessors');
+              }
+              
+              if (fileContent.includes('yield') || fileContent.includes('block_given?')) {
+                patterns.push('Uses block-based programming');
+              }
+              
+              codeAnalysis.patterns = patterns;
+            } catch (error) {
+              console.log(`Error reading main file for gem ${packageName}`);
+            }
+          }
+        } catch (error) {
+          console.log(`Error analyzing gem ${packageName}`);
+        }
+        
+        // Extract usage patterns from examples
+        usagePatterns = examples.map(example => {
+          const lines = example.split('\n');
+          // Get the first few lines that show how to use the package
+          return lines.slice(0, Math.min(5, lines.length)).join('\n');
+        });
         break;
         
       default:
-        throw new Error(\`Unsupported package type: \${packageType}\`);
+        throw new Error(`Unsupported package type: ${packageType}`);
     }
     
+    // Return comprehensive research results
     return {
       metadata,
       readme,
@@ -385,10 +817,15 @@ async function researchPackage(packageName, type = 'auto') {
       apiReference,
       basicUsage,
       type: packageType,
-      framework
+      framework,
+      dependencies,
+      popularityMetrics,
+      codeAnalysis,
+      usagePatterns,
+      researchTimestamp: new Date().toISOString()
     };
   } catch (error) {
-    console.error(\`Error researching package \${packageName}:\`, error);
+    console.error(`Error researching package ${packageName}:`, error);
     throw error;
   }
 }
@@ -438,14 +875,270 @@ function extractExamplesFromReadme(readme) {
 
 // Helper function to generate API reference
 async function generateApiReference(packageName, type) {
-  // This would be an extensive function to generate API reference
-  // For now, return a placeholder
-  return {
-    methods: [],
-    classes: [],
-    interfaces: [],
-    message: \`API reference for \${packageName} would be generated here\`
-  };
+  try {
+    console.log(`Generating API reference for ${packageName} (${type})`);
+    
+    if (type === 'node') {
+      // For Node.js packages
+      try {
+        // Try to get types information if available
+        const { stdout: typesOutput } = await execAsync(`npm view ${packageName} types typings --json`);
+        const typesInfo = JSON.parse(typesOutput || '{}');
+        const hasTypes = typesInfo.types || typesInfo.typings;
+        
+        // If package has TypeScript definitions, try to extract API info from them
+        if (hasTypes) {
+          console.log(`${packageName} has TypeScript definitions`);
+          
+          // Get package files to analyze
+          let packageFiles = [];
+          try {
+            // Create a temporary directory to install the package
+            const tempDir = path.join(os.tmpdir(), `gpm-api-${packageName}-${Date.now()}`);
+            await fs.mkdir(tempDir, { recursive: true });
+            
+            // Install the package in the temp directory
+            await execAsync(`cd ${tempDir} && npm init -y && npm install ${packageName} --no-save`, { timeout: 60000 });
+            
+            // Get main file
+            const { stdout: packageJson } = await execAsync(`npm view ${packageName} main --json`);
+            const mainFile = JSON.parse(packageJson || '""');
+            
+            // Find the installed package directory
+            const packagePath = path.join(tempDir, 'node_modules', packageName);
+            const mainFilePath = path.join(packagePath, mainFile || 'index.js');
+            
+            // Analyze the main file for exports
+            const { stdout: fileContent } = await execAsync(`cat ${mainFilePath}`);
+            
+            // Basic regex extraction of methods and classes
+            const methodRegex = /(?:function|const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g;
+            const classRegex = /class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+            
+            const methods = [];
+            const classes = [];
+            
+            let match;
+            while ((match = methodRegex.exec(fileContent)) !== null) {
+              if (match[1] && !methods.includes(match[1])) {
+                methods.push(match[1]);
+              }
+            }
+            
+            while ((match = classRegex.exec(fileContent)) !== null) {
+              if (match[1] && !classes.includes(match[1])) {
+                classes.push(match[1]);
+              }
+            }
+            
+            // Extract exports
+            const exportRegex = /(?:module\.)?exports(?:\.([a-zA-Z_$][a-zA-Z0-9_$]*)|\[['"](.*?)['"]\])\s*=/g;
+            const exports = [];
+            
+            while ((match = exportRegex.exec(fileContent)) !== null) {
+              if (match[1] && !exports.includes(match[1])) {
+                exports.push(match[1]);
+              }
+              if (match[2] && !exports.includes(match[2])) {
+                exports.push(match[2]);
+              }
+            }
+            
+            // Clean up temporary directory
+            await execAsync(`rm -rf ${tempDir}`);
+            
+            return {
+              methods,
+              classes,
+              exports,
+              interfaces: [],
+              hasTypes: true,
+              typesFile: hasTypes
+            };
+          } catch (error) {
+            console.error(`Error analyzing package files for ${packageName}:`, error);
+          }
+        }
+        
+        // Fall back to extracting from npm registry information
+        const { stdout: packageInfoJson } = await execAsync(`npm view ${packageName} --json`);
+        const packageInfo = JSON.parse(packageInfoJson);
+        
+        return {
+          methods: [],
+          classes: [],
+          interfaces: [],
+          hasTypes: Boolean(hasTypes),
+          packageInfo: {
+            main: packageInfo.main,
+            bin: packageInfo.bin,
+            dependencies: packageInfo.dependencies,
+            peerDependencies: packageInfo.peerDependencies
+          }
+        };
+      } catch (error) {
+        console.error(`Error generating API reference for ${packageName}:`, error);
+        return {
+          methods: [],
+          classes: [],
+          interfaces: [],
+          error: error.message
+        };
+      }
+    } else if (type === 'python') {
+      // For Python packages
+      try {
+        // Get package information
+        const { stdout } = await execAsync(`pip show ${packageName}`);
+        
+        // Try to get package location
+        const locationMatch = stdout.match(/Location: (.+)/);
+        let packagePath = null;
+        
+        if (locationMatch && locationMatch[1]) {
+          packagePath = path.join(locationMatch[1].trim(), packageName);
+          
+          // Check if the directory exists
+          try {
+            await fs.access(packagePath);
+            
+            // Look for __init__.py or primary module files
+            const initFile = path.join(packagePath, '__init__.py');
+            try {
+              const fileContent = await fs.readFile(initFile, 'utf-8');
+              
+              // Extract classes
+              const classRegex = /class\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+              const classes = [];
+              
+              let match;
+              while ((match = classRegex.exec(fileContent)) !== null) {
+                if (match[1] && !classes.includes(match[1])) {
+                  classes.push(match[1]);
+                }
+              }
+              
+              // Extract functions
+              const funcRegex = /def\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+              const functions = [];
+              
+              while ((match = funcRegex.exec(fileContent)) !== null) {
+                if (match[1] && !functions.includes(match[1]) && !match[1].startsWith('_')) {
+                  functions.push(match[1]);
+                }
+              }
+              
+              return {
+                methods: functions,
+                classes,
+                modules: [],
+                packagePath
+              };
+            } catch (error) {
+              console.log(`No __init__.py found for ${packageName}`);
+            }
+          } catch (error) {
+            console.log(`Package directory not found for ${packageName}`);
+          }
+        }
+        
+        // Fall back to generic information
+        return {
+          methods: [],
+          classes: [],
+          modules: [],
+          summary: "API reference information could not be extracted automatically"
+        };
+      } catch (error) {
+        console.error(`Error generating API reference for Python package ${packageName}:`, error);
+        return {
+          methods: [],
+          classes: [],
+          modules: [],
+          error: error.message
+        };
+      }
+    } else if (type === 'ruby') {
+      // For Ruby gems
+      try {
+        // Try to get gem documentation
+        const { stdout } = await execAsync(`gem specification ${packageName} --yaml`);
+        
+        // Parse YAML output
+        const moduleRegex = /module\s+([A-Z][a-zA-Z0-9_]*)/g;
+        const classRegex = /class\s+([A-Z][a-zA-Z0-9_]*)/g;
+        const methodRegex = /def\s+([a-z_][a-zA-Z0-9_]*)/g;
+        
+        const modules = [];
+        const classes = [];
+        const methods = [];
+        
+        // Get gem path
+        const gemPathResult = await execAsync(`gem which ${packageName} 2>/dev/null || echo "not found"`);
+        const gemPath = gemPathResult.stdout.trim();
+        
+        if (gemPath !== "not found") {
+          // Try to read the main gem file
+          try {
+            const mainRbPath = gemPath.replace(/\/lib\/.*$/, '/lib/' + packageName + '.rb');
+            const fileContent = await fs.readFile(mainRbPath, 'utf-8');
+            
+            let match;
+            while ((match = moduleRegex.exec(fileContent)) !== null) {
+              if (match[1] && !modules.includes(match[1])) {
+                modules.push(match[1]);
+              }
+            }
+            
+            while ((match = classRegex.exec(fileContent)) !== null) {
+              if (match[1] && !classes.includes(match[1])) {
+                classes.push(match[1]);
+              }
+            }
+            
+            while ((match = methodRegex.exec(fileContent)) !== null) {
+              if (match[1] && !methods.includes(match[1]) && !match[1].startsWith('_')) {
+                methods.push(match[1]);
+              }
+            }
+          } catch (error) {
+            console.log(`Could not read main file for gem ${packageName}`);
+          }
+        }
+        
+        return {
+          modules,
+          classes,
+          methods,
+          gemPath: gemPath !== "not found" ? gemPath : null
+        };
+      } catch (error) {
+        console.error(`Error generating API reference for Ruby gem ${packageName}:`, error);
+        return {
+          modules: [],
+          classes: [],
+          methods: [],
+          error: error.message
+        };
+      }
+    }
+    
+    // Default fallback
+    return {
+      methods: [],
+      classes: [],
+      interfaces: [],
+      message: `API reference generation not implemented for type: ${type}`
+    };
+  } catch (error) {
+    console.error(`Error in generateApiReference for ${packageName}:`, error);
+    return {
+      methods: [],
+      classes: [],
+      interfaces: [],
+      error: error.message
+    };
+  }
 }
 
 // Helper function to get installed packages
@@ -576,16 +1269,216 @@ async function searchPackage(query, type = 'all') {
 
 // Helper function to fetch Python package readme from PyPI
 async function fetchPythonReadme(packageName) {
-  // This would use fetch to get the readme from PyPI
-  // For this example, return a placeholder
-  return \`Placeholder readme for Python package \${packageName}\`;
+  console.log(`Fetching README for Python package: ${packageName}`);
+  
+  try {
+    // Try PyPI JSON API first
+    const response = await fetch(`https://pypi.org/pypi/${packageName}/json`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Check if description is available
+      if (data.info && data.info.description) {
+        return data.info.description;
+      }
+      
+      // If no description in JSON, try to get README from the package's homepage
+      if (data.info && data.info.project_urls) {
+        // Check for GitHub repository links
+        let githubUrl = null;
+        
+        // Look for GitHub links in project_urls
+        for (const [key, url] of Object.entries(data.info.project_urls)) {
+          if (typeof url === 'string' && url.includes('github.com')) {
+            githubUrl = url;
+            break;
+          }
+        }
+        
+        // If found GitHub URL, try to get README
+        if (githubUrl) {
+          // Parse GitHub URL to get owner and repo
+          const githubMatch = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+          
+          if (githubMatch && githubMatch.length >= 3) {
+            const owner = githubMatch[1];
+            const repo = githubMatch[2].replace('.git', '');
+            
+            // Try different README filenames
+            const readmeFilenames = ['README.md', 'README.rst', 'README.txt', 'README'];
+            
+            for (const filename of readmeFilenames) {
+              try {
+                const readmeResponse = await fetch(
+                  `https://raw.githubusercontent.com/${owner}/${repo}/master/${filename}`
+                );
+                
+                if (readmeResponse.ok) {
+                  return await readmeResponse.text();
+                }
+              } catch (error) {
+                console.log(`Error fetching ${filename} from GitHub for ${packageName}`);
+              }
+            }
+          }
+        }
+      }
+      
+      // If we still don't have a README, try to scrape PyPI webpage
+      const htmlResponse = await fetch(`https://pypi.org/project/${packageName}/`);
+      
+      if (htmlResponse.ok) {
+        const html = await htmlResponse.text();
+        
+        // Extract description section from HTML
+        const descriptionMatch = html.match(/<div[^>]+class="[^"]*project-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+        
+        if (descriptionMatch && descriptionMatch[1]) {
+          // Simple HTML cleanup
+          return descriptionMatch[1]
+            .replace(/<\/?[^>]+(>|$)/g, '') // Remove HTML tags
+            .replace(/&nbsp;/g, ' ')         // Replace non-breaking spaces
+            .replace(/&lt;/g, '<')           // Replace special characters
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')            // Normalize whitespace
+            .trim();
+        }
+      }
+    }
+    
+    // If all else fails, fall back to pip show description
+    try {
+      const { stdout } = await execAsync(`pip show ${packageName}`);
+      const summaryMatch = stdout.match(/Summary: (.*)/);
+      
+      if (summaryMatch && summaryMatch[1]) {
+        return `${summaryMatch[1]}\n\nNote: Full README could not be retrieved. This is the package summary.`;
+      }
+    } catch (error) {
+      console.error(`Error running pip show for ${packageName}:`, error);
+    }
+    
+    return `No README found for Python package ${packageName}`;
+  } catch (error) {
+    console.error(`Error fetching README for Python package ${packageName}:`, error);
+    return `Error fetching README for Python package ${packageName}: ${error.message}`;
+  }
 }
 
 // Helper function to fetch Ruby gem readme from RubyGems
 async function fetchRubyReadme(packageName) {
-  // This would use fetch to get the readme from RubyGems
-  // For this example, return a placeholder
-  return \`Placeholder readme for Ruby gem \${packageName}\`;
+  console.log(`Fetching README for Ruby gem: ${packageName}`);
+  
+  try {
+    // Try RubyGems.org API first
+    const response = await fetch(`https://rubygems.org/api/v1/gems/${packageName}.json`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Look for GitHub repository URL
+      let githubUrl = null;
+      
+      // Check various possible repository URLs in the gem data
+      const possibleRepoUrls = [
+        data.source_code_uri,
+        data.homepage_uri,
+        data.project_uri
+      ];
+      
+      for (const url of possibleRepoUrls) {
+        if (url && url.includes('github.com')) {
+          githubUrl = url;
+          break;
+        }
+      }
+      
+      // If found GitHub URL, try to get README
+      if (githubUrl) {
+        console.log(`Found GitHub URL for ${packageName}: ${githubUrl}`);
+        
+        // Parse GitHub URL to get owner and repo
+        const githubMatch = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        
+        if (githubMatch && githubMatch.length >= 3) {
+          const owner = githubMatch[1];
+          const repo = githubMatch[2].replace('.git', '');
+          
+          // Try different README filenames
+          const readmeFilenames = ['README.md', 'README.rdoc', 'README.textile', 'README.txt', 'README'];
+          
+          for (const filename of readmeFilenames) {
+            try {
+              console.log(`Trying to fetch ${filename} from GitHub for ${packageName}`);
+              
+              const readmeResponse = await fetch(
+                `https://raw.githubusercontent.com/${owner}/${repo}/master/${filename}`
+              );
+              
+              if (readmeResponse.ok) {
+                const content = await readmeResponse.text();
+                console.log(`Successfully fetched ${filename} from GitHub for ${packageName}`);
+                return content;
+              }
+            } catch (error) {
+              console.log(`Error fetching ${filename} from GitHub for ${packageName}`);
+            }
+          }
+        }
+      }
+      
+      // If we couldn't get README from GitHub, try to use the gem description
+      if (data.info) {
+        return `${data.info}\n\nNote: This is the gem summary. Full README could not be retrieved.`;
+      }
+    }
+    
+    // If RubyGems.org API fails, try to scrape the gem page
+    try {
+      console.log(`Trying to scrape RubyGems.org page for ${packageName}`);
+      const htmlResponse = await fetch(`https://rubygems.org/gems/${packageName}`);
+      
+      if (htmlResponse.ok) {
+        const html = await htmlResponse.text();
+        
+        // Extract description section from HTML
+        const descriptionMatch = html.match(/<div[^>]+class="[^"]*gem__desc[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+        
+        if (descriptionMatch && descriptionMatch[1]) {
+          // Simple HTML cleanup
+          return descriptionMatch[1]
+            .replace(/<\/?[^>]+(>|$)/g, '') // Remove HTML tags
+            .replace(/&nbsp;/g, ' ')         // Replace non-breaking spaces
+            .replace(/&lt;/g, '<')           // Replace special characters
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')            // Normalize whitespace
+            .trim();
+        }
+      }
+    } catch (error) {
+      console.error(`Error scraping RubyGems.org page for ${packageName}:`, error);
+    }
+    
+    // If all else fails, try to get information from locally installed gem
+    try {
+      console.log(`Trying to get README from locally installed gem ${packageName}`);
+      const { stdout } = await execAsync(`gem specification ${packageName} description -l`);
+      
+      if (stdout.trim()) {
+        return stdout.trim();
+      }
+    } catch (error) {
+      console.error(`Error getting local gem specification for ${packageName}:`, error);
+    }
+    
+    return `No README found for Ruby gem ${packageName}`;
+  } catch (error) {
+    console.error(`Error fetching README for Ruby gem ${packageName}:`, error);
+    return `Error fetching README for Ruby gem ${packageName}: ${error.message}`;
+  }
 }
 
 // Helper function for agent-specific optimizations
