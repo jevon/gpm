@@ -479,14 +479,14 @@
                 </div>
                 
                 <div class="code-block">
-                    <pre><span class="comment"># Install with MCP server generation</span>
-gpm install express
+                    <pre><span class="comment"># Install packages as usual</span>
+gpm install express axios
 
-<span class="comment"># Start the MCP server to provide context to LLMs</span>
-gpm serve-mcp express
+<span class="comment"># Start the unified MCP server</span>
+gpm serve
 
-<span class="comment"># Use with your favorite AI coding assistant</span>
-your-ai-tool "Create an Express API with authentication"</pre>
+<span class="comment"># Now AI assistants can query any package in real-time</span>
+curl http://localhost:3000/api/context/express</pre>
                 </div>
             </div>
         </div>
@@ -496,7 +496,7 @@ your-ai-tool "Create an Express API with authentication"</pre>
         <div class="container">
             <div class="section-header">
                 <h2>Why GPM?</h2>
-                <p>GPM enhances AI-assisted development by providing rich, structured package context to LLMs.</p>
+                <p>GPM enhances AI-assisted development with a unified server that dynamically provides package context to LLMs.</p>
             </div>
             
             <div class="features-grid">
@@ -520,16 +520,16 @@ your-ai-tool "Create an Express API with authentication"</pre>
                     <div class="feature-icon">
                         <i class="fas fa-server"></i>
                     </div>
-                    <h3>MCP Server Generation</h3>
-                    <p>Creates context-rich servers for each package that LLMs can query for information.</p>
+                    <h3>Unified MCP Server</h3>
+                    <p>Single server that dynamically researches and provides context for any package on demand.</p>
                 </div>
                 
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-search"></i>
                     </div>
-                    <h3>Automatic Research</h3>
-                    <p>Researches packages from official registries and extracts examples and patterns.</p>
+                    <h3>Real-Time Research</h3>
+                    <p>Researches packages on-demand with intelligent caching for faster response times.</p>
                 </div>
                 
                 <div class="feature-card">
@@ -555,47 +555,47 @@ your-ai-tool "Create an Express API with authentication"</pre>
         <div class="container">
             <div class="section-header">
                 <h2>How It Works</h2>
-                <p>GPM enhances your development workflow by creating rich context for your dependencies.</p>
+                <p>GPM's unified server provides real-time, on-demand research for any package your AI assistant needs.</p>
             </div>
             
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>Package Installation</h3>
-                        <p>GPM detects your project type and installs packages using the appropriate manager (npm, pip, or gem/bundler).</p>
+                        <h3>Start the Unified Server</h3>
+                        <p>Run <code>gpm serve</code> to start the unified MCP server that can dynamically research any package.</p>
                     </div>
                 </div>
                 
                 <div class="workflow-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>Package Research</h3>
-                        <p>GPM researches the package by fetching data from registries and GitHub, extracting examples and patterns.</p>
+                        <h3>Request Package Info</h3>
+                        <p>AI assistants query the server for information about any package through RESTful endpoints.</p>
                     </div>
                 </div>
                 
                 <div class="workflow-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>Context Creation</h3>
-                        <p>A structured context is created in <code>.gpm/&lt;package&gt;/research.json</code>, optimized for your detected AI coding assistant.</p>
+                        <h3>Dynamic Research</h3>
+                        <p>The server researches the package in real-time, fetching data from registries, GitHub, and extracting examples.</p>
                     </div>
                 </div>
                 
                 <div class="workflow-step">
                     <div class="step-number">4</div>
                     <div class="step-content">
-                        <h3>MCP Server Generation</h3>
-                        <p>GPM generates an Express server in <code>.gpm/&lt;package&gt;/mcp/</code> with API endpoints that provide package context.</p>
+                        <h3>Intelligent Caching</h3>
+                        <p>Research results are cached for performance while still maintaining the ability to refresh when needed.</p>
                     </div>
                 </div>
                 
                 <div class="workflow-step">
                     <div class="step-number">5</div>
                     <div class="step-content">
-                        <h3>LLM Integration</h3>
-                        <p>AI coding assistants can access the MCP server endpoints to understand the package better, resulting in more accurate code generation.</p>
+                        <h3>Optimized Response</h3>
+                        <p>Context is tailored to the detected AI assistant, ensuring the most effective format for each tool.</p>
                     </div>
                 </div>
             </div>
@@ -655,8 +655,8 @@ your-ai-tool "Create an Express API with authentication"</pre>
     
     <section class="cta-section">
         <div class="container">
-            <h2>Stop wasting time on AI-generated bugs</h2>
-            <p>Install GPM today and start building with an AI assistant that actually understands your code dependencies.</p>
+            <h2>One server. Any package. Instant context.</h2>
+            <p>Install GPM today and give your AI assistant real-time knowledge of any package you're using.</p>
             
             <div class="cta-buttons">
                 <a href="https://github.com/jevon/gpm#installation" class="btn btn-primary">
@@ -679,7 +679,7 @@ your-ai-tool "Create an Express API with authentication"</pre>
                         <i class="fas fa-box-open"></i>
                         <span>GPM</span>
                     </div>
-                    <p>GPM is an enhanced package manager that bridges the gap between traditional package managers and AI coding assistants.</p>
+                    <p>GPM provides a unified server that dynamically researches any package your AI assistant needs, delivering instant, intelligent context.</p>
                     
                     <div class="social-links">
                         <a href="https://github.com/jevon/gpm" target="_blank">
